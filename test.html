@@ -1,90 +1,646 @@
 <!DOCTYPE html>
 
 <html>
-<head>
-    <title>S0809: Скоростно влакче</title>
-    <meta charset="utf-8">
+	<head>
+		<title>S0809: Скоростно влакче</title>
+		<meta charset="utf-8">
+		
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		
+		<script type="importmap">
+		  {
+			"imports": {
+			  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+			  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+			  "vax": "https://boytchev.github.io/CourseVAX/lib/vax.js"
+			}
+		  }
+		</script>
+	</head>
+	
+	<body>
+		<script type="module">
+		
+			import * as THREE from "three";
+			import * as VAX from "vax";
 
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+			VAX.initScene(animate, VAX.initParallax, 1);
 
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-            "vax": "https://boytchev.github.io/CourseVAX/lib/vax.js"
-          }
-        }
-    </script>
-</head>
+			VAX.camera.position.set(0, 400, 400);
+			VAX.camera.lookAt(new THREE.Vector3(0, 50, 0));
 
-<body>
-<script type="module">
+			// подменяме кубчето със сфера
+			VAX.object.geometry = new THREE.IcosahedronGeometry(7, 4);
 
-    import * as THREE from "three";
-    import * as VAX from "vax";
+            VAX.ground.material.color.set(0xc0ccc2);
+            VAX.ground.material.side = THREE.DoubleSide;
+            VAX.ground.scale.set(3 , 1 , 3)
 
-    VAX.initScene(animate, VAX.initAnaglyph);
+            VAX.ambientLight.intensity = 1; // Adjust intensity to balance shadows
+            VAX.ambientLight.color.set('white'); // Ensure the light color is neutral
+            VAX.spotLight.position.set(0, 200, 100); // Ensure it lights up the scene effectively
 
-    VAX.camera.focus = 3;
-    VAX.camera.position.set(0, 80, 100);
-    VAX.camera.lookAt(new THREE.Vector3(0, 50, 0));
 
-    VAX.spotLight.intensity = 3;
+            function createBuilding({
+                buildingWidth = 50,
+                buildingHeight = 100,
+                buildingDepth = 50,
+                buildingColor = 0x8b8b8b,
+                windowRows = 4,
+                windowCols = 2,
+                windowMargin = 5,
+                windowColor = 0x87CEEB,
+                windowOffsetX = 0, // Additional offset for windows
+                windowOffsetY = 0, // Additional offset for windows 
+                windowOffset = 0 // Additional offset for windows
+            }) {
+                // Create building geometry and material
+                const buildingGeometry = new THREE.BoxGeometry(buildingWidth, buildingHeight, buildingDepth);
+                const buildingMaterial = new THREE.MeshStandardMaterial({
+                    color: buildingColor,
+                    metalness: 0.5,
+                    roughness: 0.8
+                });
 
-    // подменяме кубчето със сфера
-    VAX.object.geometry = new THREE.IcosahedronGeometry(7, 4);
+                // Create building mesh
+                const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                building.castShadow = true;
+                building.receiveShadow = true;
 
-    // траектория на тунела на влакчето
-    class CustomCurve extends THREE.Curve
-    {
-        getPoint(t)
-        {
-            var angle = 2*Math.PI*t;
+                // Position the building
+                building.position.set(10, buildingHeight / 2, 0); // Lift it to rest on the ground
+                VAX.scene.add(building);
 
-            return new THREE.Vector3(
-                70*Math.sin(2*angle) - 40*Math.cos(3*angle),
-                55+20*Math.sin(7*angle) + 30*Math.sin(4*angle),
-                70*Math.cos(3*angle) + 40*Math.sin(2*angle));
-        };
-    }
 
-    // траектория
-    var curve = new CustomCurve();
+                // Calculate window size based on building dimensions
+                const windowWidth = (buildingWidth - windowMargin * (windowCols + 1)) / windowCols;
+                const windowHeight = (buildingHeight - windowMargin * (windowRows + 1)) / windowRows;
 
-    // самият тунел
-    var geometry = new THREE.TubeGeometry(curve, 600, 5, 20, false),
-        material = new THREE.MeshPhongMaterial({
-            color: 'silver',
-            emissive: 'crimson',
-            emissiveIntensity: 0.5,
-            shininess: 260
-        }),
-        mesh = new THREE.Mesh(geometry, material);
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-    VAX.scene.add(mesh);
+                // Create windows for the building
+                const windowMaterial = new THREE.MeshStandardMaterial({
+                    color: windowColor,
+                    emissive: windowColor,
+                    emissiveIntensity: 0.3
+                });
 
-    // подпори на тунела - поредица от пилони
-    for (var i = 0; i < 16; i++)
-    {
-        var p = new VAX.Pillar(curve.getPointAt((i+0.1)/16));
-        p.scale.set(0.4, 0.95, 0.4);
-        p.receiveShadow = true;
-        p.castShadow = true;
-        VAX.scene.add(p);
-    }
+                const windowGeometry = new THREE.PlaneGeometry(windowWidth, windowHeight);
 
-    function animate(t)
-    {
-        VAX.object.position.copy(curve.getPoint((t/20)%1));
+                // Function to add windows to a specific side
+                function addWindowsToSide(offsetX, offsetZ, rotationY) {
+                    for (let row = 1; row < windowRows; row++) {
+                        for (let col = 0; col < windowCols; col++) {
+                            const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                            window.castShadow = false;
+                            window.receiveShadow = false;
 
-        VAX.scene.rotation.y = t/3;
-        VAX.spotLight.position.setFromSphericalCoords(200, Math.PI/5, -t/3);
-    }
+                            // Calculate position
+                            const posX = -buildingWidth / 2 + windowMargin + col * (windowWidth + windowMargin) + windowWidth / 2;
+                            const posY = -buildingHeight / 2 + windowMargin + row * (windowHeight + windowMargin) + windowHeight / 2;
+                            const posZ = buildingDepth / 2 + 0.1 + windowOffset; // Slightly in front of the building surface
 
-</script>
-</body>
+                            window.position.set(posX + offsetX, posY, posZ + offsetZ);
+                            window.rotation.y = rotationY;
+
+                            building.add(window);
+                        }
+                    }
+                }
+
+                // Add windows to all four sides
+                addWindowsToSide(0, -buildingDepth / 2 - windowOffsetY, Math.PI); // Front
+                addWindowsToSide(0, buildingWidth  / 2 - windowOffsetX, 0);       // Back
+
+                return building;
+            }
+
+            // Example usage
+            const building = createBuilding({
+                buildingWidth: 100,
+                buildingHeight: 150,
+                buildingDepth: 75,
+                windowRows: 5,
+                windowCols: 3,
+                windowMargin: 10,
+                windowOffset: 0.2, // Slightly offset windows
+                windowOffsetX: 50, // Additional offset for windows
+                windowOffsetY: 40,
+            });
+
+            building.position.set(-100, building.position.y, -400);
+
+
+            const building2 = createBuilding({
+                buildingWidth: 200,
+                buildingHeight: 300,
+                buildingDepth: 75,
+                windowRows: 10,
+                windowCols: 6,
+                windowMargin: 10,
+                windowOffset: 0.2, // Slightly offset windows
+                windowOffsetX: 100, // Additional offset for windows
+                windowOffsetY: 40,
+            });
+
+            building2.position.set(100, building2.position.y, -400);
+
+
+            const building3 = createBuilding({
+                buildingWidth: 200,
+                buildingHeight: 300,
+                buildingDepth: 75,
+                windowRows: 10,
+                windowCols: 6,
+                windowMargin: 10,
+                windowOffset: 0.2, // Slightly offset windows
+                windowOffsetX: 100, // Additional offset for windows
+                windowOffsetY: 40,
+            });
+
+            building3.position.set(-120, building3.position.y, 400);
+
+            
+            // small building
+            const building4 = createBuilding({
+                buildingWidth: 100,
+                buildingHeight: 100,
+                buildingDepth: 50,
+                windowRows: 3,
+                windowCols: 3,
+                windowMargin: 10,
+                windowOffset: 0.2, // Slightly offset windows
+                windowOffsetX: 50, // Additional offset for windows
+                windowOffsetY: 26,
+            });
+
+            building4.position.set(100, building4.position.y, 400);
+
+
+
+            // small building
+            const building5 = createBuilding({
+                buildingWidth: 100,
+                buildingHeight: 100,
+                buildingDepth: 50,
+                windowRows: 3,
+                windowCols: 3,
+                windowMargin: 10,
+                windowOffset: 0.2, // Slightly offset windows
+                windowOffsetX: 50, // Additional offset for windows
+                windowOffsetY: 26,
+            });
+
+            building5.position.set(300, building5.position.y, -400);
+
+
+
+            const building6 = createBuilding({
+                buildingWidth: 150,
+                buildingHeight: 200,
+                buildingDepth: 100, // Increased depth
+                windowRows: 8,
+                windowCols: 4,
+                windowMargin: 12,
+                windowOffset: 0.3,
+                windowOffsetX: 75,
+                windowOffsetY: 35,
+            });
+            building6.position.set(-250, building6.position.y, -400);
+
+
+            // Large building with tall proportions
+            const building7 = createBuilding({
+                buildingWidth: 120,
+                buildingHeight: 400, // Taller height
+                buildingDepth: 80,
+                windowRows: 15,
+                windowCols: 5,
+                windowMargin: 8,
+                windowOffset: 0.15,
+                windowOffsetX: 60,
+                windowOffsetY: 42,
+            });
+            building7.position.set(200, building7.position.y, 400);
+
+
+            // Compact building with square proportions
+            const building8 = createBuilding({
+                buildingWidth: 80,
+                buildingHeight: 80,
+                buildingDepth: 80, // Square proportions
+                windowRows: 3,
+                windowCols: 2,
+                windowMargin: 10,
+                windowOffset: 0.2,
+                windowOffsetX: 40,
+                windowOffsetY: 41,
+            });
+            building8.position.set(350, building8.position.y, 410);
+
+
+
+            // Skyscraper with narrow base
+            const building9 = createBuilding({
+                buildingWidth: 70,
+                buildingHeight: 500, // Very tall
+                buildingDepth: 60,
+                windowRows: 20,
+                windowCols: 3,
+                windowMargin: 5,
+                windowOffset: 0.1,
+                windowOffsetX: 35,
+                windowOffsetY: 35,
+            });
+            building9.position.set(-400, building9.position.y, 404);
+
+
+
+            // Street parameters
+            const streetWidth = 100;
+            const streetLength = 900;
+            const laneMarkingWidth = 20;
+            const laneMarkingLength = 5;
+            const laneMarkingSpacing = 40;
+
+            // Street material
+            const streetMaterial = new THREE.MeshStandardMaterial({
+                color: 0x333333, // Dark gray for the road
+                roughness: 1, // Non-reflective surface
+            });
+
+            // Create the street geometry and mesh
+            const streetGeometry = new THREE.PlaneGeometry(streetWidth, streetLength);
+            const street = new THREE.Mesh(streetGeometry, streetMaterial);
+            street.rotation.x = -Math.PI / 2; // Lay flat on the ground
+            street.rotation.z = -Math.PI / 2; // Lay flat on the ground
+
+            street.receiveShadow = true;
+            street.position.set(0, 1, 300); // Centered on the scene
+            VAX.scene.add(street);
+
+            // Lane marking material
+            const laneMarkingMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff, // White for lane markings
+                emissive: 0xffffff, // Make markings slightly emissive
+                emissiveIntensity: 0.8,
+            });
+
+            // Function to create lane markings
+            function addLaneMarkings() {
+                const markingGeometry = new THREE.PlaneGeometry(laneMarkingWidth, laneMarkingLength);
+
+                for (let i = -streetLength / 2; i < streetLength / 2; i += laneMarkingLength + laneMarkingSpacing) {
+                    // Create a lane marking for the left side
+                    const leftMarking = new THREE.Mesh(markingGeometry, laneMarkingMaterial);
+                    leftMarking.rotation.set(-Math.PI / 2, 0, 0); // Lay flat and rotate
+                    leftMarking.position.set(i, 1.1, 300); // Slightly above the street
+                    VAX.scene.add(leftMarking);
+                }
+            }
+
+            // Add lane markings to the street
+            addLaneMarkings();
+
+
+
+            // Street 2
+
+            // Street parameters
+            const streetWidth2 = 100;
+            const streetLength2 = 900;
+            const laneMarkingWidth2 = 20;
+            const laneMarkingLength2 = 5;
+            const laneMarkingSpacing2 = 40;
+
+            // Street material
+            const streetMaterial2 = new THREE.MeshStandardMaterial({
+                color: 0x333333, // Dark gray for the road
+                roughness: 1, // Non-reflective surface
+            });
+
+            // Create the street geometry and mesh
+            const streetGeometry2 = new THREE.PlaneGeometry(streetWidth2, streetLength2);
+            const street2 = new THREE.Mesh(streetGeometry2, streetMaterial2);
+            street2.rotation.x = -Math.PI / 2; // Lay flat on the ground
+            street2.rotation.z = -Math.PI / 2; // Lay flat on the ground
+            
+            street2.receiveShadow = true;
+            street2.position.set(0, 1, -300); // Centered on the scene
+            VAX.scene.add(street2);
+
+            // Lane marking material
+            const laneMarkingMaterial2 = new THREE.MeshStandardMaterial({
+                color: 0xffffff, // White for lane markings
+                emissive: 0xffffff, // Make markings slightly emissive
+                emissiveIntensity: 0.8,
+            });
+
+            // Function to create lane markings
+            function addLaneMarkings2() {
+                const markingGeometry2 = new THREE.PlaneGeometry(laneMarkingWidth2, laneMarkingLength2);
+
+                for (let i = -streetLength2 / 2; i < streetLength2 / 2; i += laneMarkingLength2 + laneMarkingSpacing2) {
+                    // Create a lane marking for the left side
+                    const leftMarking2 = new THREE.Mesh(markingGeometry2, laneMarkingMaterial2);
+                    leftMarking2.rotation.set(-Math.PI / 2, 0, 0); // Lay flat and rotate
+                    leftMarking2.position.set(i, 1.1, -300); // Slightly above the street
+                    VAX.scene.add(leftMarking2);
+                }
+            }
+
+            // Add lane markings to the street
+            addLaneMarkings2();
+
+
+            // Park parameters
+            const parkWidth = 800; // Major axis of the ellipse
+            const parkDepth = 400; // Minor axis of the ellipse
+            const parkColor = 0x228B22; // Green color for the park
+
+            // Create park geometry and material
+            const parkGeometry = new THREE.PlaneGeometry(parkWidth, parkDepth, 64, 64); // Higher subdivisions for a smooth look
+            const parkMaterial = new THREE.MeshStandardMaterial({
+                color: parkColor, // Green color
+                roughness: 1, // Non-reflective surface
+                side: THREE.DoubleSide,
+            });
+
+            // Create the park mesh
+            const park = new THREE.Mesh(parkGeometry, parkMaterial);
+            park.rotation.x = -Math.PI / 2; // Lay flat on the ground
+            park.position.set(0, 1, 0); // Position in the middle of the streets
+
+            // Add the park to the scene
+            VAX.scene.add(park);
+
+
+            function createTree(positionX, positionZ) {
+                const trunkHeight = Math.random() * (50 - 30) + 30; 
+
+                const trunkWidth = Math.random() * (3 - 2) + 5;
+
+                const foliageSize = Math.random() * (30 - 8) + 15;
+
+                // Tree trunk
+                const trunkGeometry = new THREE.CylinderGeometry(trunkWidth, trunkWidth, trunkHeight); 
+                const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); 
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.set(positionX, trunkHeight / 2, positionZ); 
+
+                // Tree foliage
+                const foliageGeometry = new THREE.SphereGeometry(foliageSize, 16, 16); 
+                const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 }); // Green foliage
+                const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                foliage.position.set(positionX, trunkHeight + foliageSize / 2, positionZ); // Position foliage on top of the trunk
+
+                // Group tree parts
+                const tree = new THREE.Group();
+                tree.add(trunk);
+                tree.add(foliage);
+
+                return tree;
+            }
+
+
+            const treePositions = [];
+            const treeNumber = 40;
+            const minDistance = 50;
+
+            function isTooClose(newPosition, existingPositions, minDistance) {
+                return existingPositions.some(existing => {
+                    const dx = newPosition.x - existing.x;
+                    const dz = newPosition.z - existing.z;
+                    return Math.sqrt(dx * dx + dz * dz) < minDistance; // Calculate Euclidean distance
+                });
+            }
+
+            for (let i = 0; i < treeNumber; i++) {
+                let validPosition = false;
+                let newPosition;
+
+                while (!validPosition) {
+                    newPosition = {
+                        x: Math.random() * parkWidth - parkWidth / 2,
+                        z: Math.random() * parkDepth - parkDepth / 2,
+                    };
+
+                    // Check if the new position is valid
+                    if (!isTooClose(newPosition, treePositions, minDistance)) {
+                        validPosition = true;
+                    }
+                }
+
+                // Add the valid position to the list
+                treePositions.push(newPosition);
+            }
+
+            // Create and add trees to the scene
+            treePositions.forEach(pos => {
+                const tree = createTree(pos.x, pos.z);
+                VAX.scene.add(tree);
+            });
+
+
+
+
+            function createCar(positionX, positionZ) {
+                // Generate a random color for the car
+                const carColor = Math.random() * 0xffffff; // Random color in hexadecimal
+
+                // Car body parameters
+                const carWidth = 20;
+                const carHeight = 10;
+                const carLength = 40;
+
+                // Car body
+                const bodyGeometry = new THREE.BoxGeometry(carWidth, carHeight, carLength);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ color: carColor });
+                const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                carBody.position.set(0, carHeight / 2, 0);
+
+                // Wheels parameters
+                const wheelRadius = 4;
+                const wheelWidth = 2;
+                const wheelColor = 0x333333; // Dark gray
+
+                const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+                const wheelMaterial = new THREE.MeshStandardMaterial({ color: wheelColor });
+
+                // Create four wheels
+                const frontLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                const frontRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                const backLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                const backRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+
+                // Rotate wheels so they lay flat
+                frontLeftWheel.rotation.z = Math.PI / 2;
+                frontRightWheel.rotation.z = Math.PI / 2;
+                backLeftWheel.rotation.z = Math.PI / 2;
+                backRightWheel.rotation.z = Math.PI / 2;
+
+                // Position wheels relative to the car body
+                const wheelOffsetX = carWidth / 2 + wheelWidth / 2;
+                const wheelOffsetZ = carLength / 2 - 10;
+                const wheelHeight = wheelRadius - carHeight / 2;
+
+                frontLeftWheel.position.set(-wheelOffsetX, wheelHeight, -wheelOffsetZ);
+                frontRightWheel.position.set(wheelOffsetX, wheelHeight, -wheelOffsetZ);
+                backLeftWheel.position.set(-wheelOffsetX, wheelHeight, wheelOffsetZ);
+                backRightWheel.position.set(wheelOffsetX, wheelHeight, wheelOffsetZ);
+
+                // Group car parts
+                const car = new THREE.Group();
+                car.add(carBody);
+                car.add(frontLeftWheel);
+                car.add(frontRightWheel);
+                car.add(backLeftWheel);
+                car.add(backRightWheel);
+
+                // Position car in the scene
+                car.position.set(positionX, 0, positionZ);
+
+                car.rotation.y = Math.PI / 2; // Rotate the car to face the street
+
+                return car;
+            }
+
+
+            const carCount = 10;
+            const minCarDistance = 50; // Minimum distance between cars
+            const carPositions = [];
+
+            // Function to check if a new position is too close to existing cars
+            function isTooCloseToOtherCars(newPosition, existingPositions, minDistance) {
+                return existingPositions.some(existing => {
+                    const dx = newPosition.x - existing.x;
+                    const dz = newPosition.z - existing.z;
+                    return Math.sqrt(dx * dx + dz * dz) < minDistance; // Calculate Euclidean distance
+                });
+            }
+
+            // Generate car positions
+            for (let i = 0; i < carCount; i++) {
+                let validPosition = false;
+                let newPosition;
+
+                while (!validPosition) {
+                    newPosition = {
+                        x: Math.random() * streetLength - streetLength / 2,
+                        z: Math.random() * streetWidth - streetWidth / 2 - 300,
+                    };
+
+                    if (!isTooCloseToOtherCars(newPosition, carPositions, minCarDistance)) {
+                        validPosition = true;
+                    }
+                }
+
+                carPositions.push(newPosition);
+            }
+
+            // Add cars to the scene
+            carPositions.forEach(pos => {
+                const car = createCar(pos.x, pos.z);
+                VAX.scene.add(car);
+            });
+
+
+            // Generate car2 positions for the second street
+
+            const carCount2 = 10;
+            const minCarDistance2 = 50; // Minimum distance between cars
+            const carPositions2 = [];
+
+            // Function to check if a new position is too close to existing cars
+            function isTooCloseToOtherCars2(newPosition, existingPositions, minDistance) {
+                return existingPositions.some(existing => {
+                    const dx = newPosition.x - existing.x;
+                    const dz = newPosition.z - existing.z;
+                    return Math.sqrt(dx * dx + dz * dz) < minDistance; // Calculate Euclidean distance
+                });
+            }
+
+            // Generate car positions
+            for (let i = 0; i < carCount2; i++) {
+                let validPosition = false;
+                let newPosition;
+
+                while (!validPosition) {
+                    newPosition = {
+                        x: Math.random() * streetLength2 - streetLength2 / 2,
+                        z: Math.random() * streetWidth2 - streetWidth2 / 2 + 300,
+                    };
+
+                    if (!isTooCloseToOtherCars2(newPosition, carPositions2, minCarDistance2)) {
+                        validPosition = true;
+                    }
+                }
+
+                carPositions2.push(newPosition);
+            }
+
+            // Add cars to the scene
+            carPositions2.forEach(pos => {
+                const car = createCar(pos.x, pos.z);
+                VAX.scene.add(car);
+            });
+
+
+
+            
+
+
+            // Custom random trajectory curve for the park
+            class RandomParkCurve extends THREE.Curve {
+                getPoint(t) {
+                    const angle = 2 * Math.PI * t;
+
+                    return new THREE.Vector3(
+                        (parkWidth / 4) * Math.sin(2 * angle) - (parkWidth / 4) * Math.cos(3 * angle), // Randomized X
+                        100 + 20 * Math.sin(5 * angle) + 15 * Math.sin(7 * angle), // Randomized height
+                        (parkDepth / 4) * Math.cos(3 * angle) + (parkDepth / 4) * Math.sin(2 * angle) // Randomized Z
+                    );
+                }
+            }
+
+            // Create the rollercoaster curve
+            const randomCurve = new RandomParkCurve();
+
+            // Rollercoaster tunnel (TubeGeometry)
+            const tubeGeometry = new THREE.TubeGeometry(randomCurve, 600, 5, 20, false);
+            const tubeMaterial = new THREE.MeshPhongMaterial({
+                color: 0xaaaaaa, // Silver color
+                emissive: 0xff4500, // Crimson emissive color
+                emissiveIntensity: 0.5,
+                shininess: 70,
+            });
+            const rollercoasterTunnel = new THREE.Mesh(tubeGeometry, tubeMaterial);
+            rollercoasterTunnel.receiveShadow = true;
+            rollercoasterTunnel.castShadow = true;
+            VAX.scene.add(rollercoasterTunnel);
+
+            // Supports for the rollercoaster (Pillars)
+            const supportCount = 20; // Number of supports
+            for (let i = 0; i < supportCount; i++) {
+                const supportPosition = randomCurve.getPointAt(i / supportCount);
+                const support = new VAX.Pillar(supportPosition);
+                support.scale.set(0.2, 1, 0.2); // Adjust scale for the park
+                support.receiveShadow = true;
+                support.castShadow = true;
+                VAX.scene.add(support);
+            }
+
+            // Animation for the rollercoaster
+            function animate(t) {
+                // Object follows the curve
+                VAX.object.position.copy(randomCurve.getPoint((t / 20) % 1));
+
+                // Rotate the scene dynamically
+                VAX.scene.rotation.y = t / 6;
+
+                // Spotlight animation for enhanced effect
+                VAX.spotLight.position.setFromSphericalCoords(300, Math.PI / 4, -t / 6);
+            }
+			
+		</script>
+	</body>
 </html>
-
 
