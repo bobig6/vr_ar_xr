@@ -5,7 +5,7 @@ body {
     height: 100vh;
     margin: 0;
     background-color: #f9e3e3;
-    font-family: 'Arial', sans-serif;
+    font-family: "Pacifico", serif;
     flex-direction: column;
   }
   
@@ -14,7 +14,13 @@ body {
   }
   
   h1 {
-    font-size: 2.5em;
+    font-family: "Pacifico", serif;
+    font-size: 4em;
+    color: #d32f2f;
+  }
+
+  h2 {
+    font-family: "Pacifico", serif;
     color: #d32f2f;
   }
   
@@ -23,6 +29,7 @@ body {
   }
   
   .yes-button {
+    font-family: "Pacifico", serif;
     font-size: 1.5em;
     padding: 10px 20px;
     margin-right: 10px;
@@ -34,6 +41,7 @@ body {
   }
   
   .no-button {
+    font-family: "Pacifico", serif;
     font-size: 1.5em;
     padding: 10px 20px;
     background-color: #f44336;
