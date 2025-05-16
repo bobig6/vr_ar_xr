@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boo, I have an important question for you.</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Confetti Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Landing Page -->
+    <section id="landing-page" class="landing-page">
+        <div class="container">
+            <h1 class="main-title">Boo, I have an important question for you.</h1>
+            <p>Before you answer, let's see if we're compatible...</p>
+            <button id="start-button" class="start-button">Take the Quiz</button>
+        </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section id="quiz-section" class="quiz-section">
+        <div class="container">
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <div class="question-container">
+                <h2 id="question" class="question">Question goes here</h2>
+                <div id="options-container" class="options">
+                    <!-- Options will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Celebration Page -->
+    <section id="celebration-page" class="celebration-page">
+        <div class="container">
+            <h1 class="celebration-title">You said YES!</h1>
+            <div class="celebration-gif">
+                <img src="https://media.tenor.com/jRAx2DcFDbUAAAAi/transparent-love.gif" alt="Celebration Hearts">
+            </div>
+            <p>I LOVE YOU SO MUCH BOO!</p>
+
+            <div class="details-section">
+                <h2 class="details-title">Prom Details</h2>
+                <p class="details-item"><strong>Date:</strong> October, 2025 (idk the exact date yet)</p>
+                <p class="details-item"><strong>Location:</strong> Hotel Marinella</p>
+                <p class="details-item"><strong>Dress Code:</strong> Formal </p>
+                <!-- List of requirements with checkboxes -->
+                 <p class="details-item requirements-heading"><strong>Requirements:</strong></p>
+                <ul class="requirements-list">
+                    <!-- the first one should be checked by default -->
+                    <li><input type="checkbox" checked><span>Be beautiful.</span></li>
+                    <li><input type="checkbox"><span>Love me!</span></li>
+                    <li><input type="checkbox"><span>Don't be jealous of the other girls.</span></li>
+                </ul>
+            </div>
+
+            <p>You are the best girl in the world! I love you no matter what!</p>
+        </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/quiz.js"></script>
+</body>
+</html>
